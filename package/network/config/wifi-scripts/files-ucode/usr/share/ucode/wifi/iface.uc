@@ -27,6 +27,7 @@ export function parse_encryption(config, dev_config) {
 	if (wildcard(dev_config?.htmode, 'EHT*') || wildcard(dev_config?.htmode, 'HE*'))
 		wpa3_pairwise = 'GCMP-256 ' + wpa3_pairwise;
 
+let defaultcipher="CCMP";
 	switch(config.auth_type) {
 	case 'owe':
 		config.auth_type = 'owe';
@@ -78,50 +79,59 @@ export function parse_encryption(config, dev_config) {
 		break;
 	}
 
-	switch(encryption[1]){
-	case 'tkip+aes':
-	case 'tkip+ccmp':
-	case 'aes+tkip':
-	case 'ccmp+tkip':
-		config.wpa_pairwise = 'CCMP TKIP';
-		break;
+let cipher_map = {
+    "tkip": "TKIP",
+    "TKIP": "TKIP",
 
-	case 'ccmp256':
-		config.wpa_pairwise = 'CCMP-256';
-		break;
+    "aes": "CCMP",
+    "AES": "CCMP",
 
-	case 'aes':
-	case 'ccmp':
-		config.wpa_pairwise = 'CCMP';
-		break;
+    "ccmp": "CCMP",
+    "CCMP": "CCMP",
 
-	case 'tkip':
-		config.wpa_pairwise = 'TKIP';
-		break;
+    "ccmp256": "CCMP-256",
+    "CCMP256": "CCMP-256",
 
-	case 'gcmp256':
-		config.wpa_pairwise = 'GCMP-256';
-		break;
+    "gcmp": "GCMP",
+    "GCMP": "GCMP",
 
-	case 'gcmp':
-		config.wpa_pairwise = 'GCMP';
-		break;
+    "gcmp256": "GCMP-256",
+    "GCMP256": "GCMP-256"
+};
 
-	default:
+
+let parts = split(encryption[1], "+");
+let result = "";
+
+for (let key in parts) {
+   
+    let mapped = cipher_map[key];
+
+    if (mapped) {
+        if (result != "")
+            result += " ";
+        result += mapped;
+    }
+}
+
+if (!result) {
 		if (config.encryption == 'wpa3-192') {
-			config.wpa_pairwise = 'GCMP-256';
+			result = 'GCMP-256';
 			break;
 		}
 
 		if (!wpa3_pairwise)
 			break;
 
-		if (config.rsn_override && wpa3_pairwise != config.wpa_pairwise)
+		if (config.rsn_override && wpa3_pairwise != result)
 			config.rsn_override_pairwise = wpa3_pairwise;
 		else
-			config.wpa_pairwise = wpa3_pairwise;
+			result = wpa3_pairwise;
 		break;
-	}
+}
+if  (!result) {result=defaultcipher;
+}
+config.wpa_pairwise = result;
 
 };
 
